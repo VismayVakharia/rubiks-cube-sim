@@ -17,6 +17,7 @@ CUBE_SIZE = 3
 
 COMMANDS = [("R", np.pi/2), ("U", np.pi/2), ("R'", np.pi/2), ("U'", np.pi/2)] * 6
 ANGLE_STEP = np.pi/20
+RECORDING = False
 
 Colors = {
     (0, 1): (255, 0, 0),
@@ -45,15 +46,16 @@ class Cubie(object):
         self.piece = piece
         self.sticker_factor = sticker_factor
         self.batch = pyglet.graphics.Batch() if (batch is None) else batch
-        self.vertex_list = self.batch.add(piece.type.value * 8, gl.GL_QUADS, None, "v3f", "c3B")
+        self.vertex_list = self.batch.add(piece.type.value * 4 + 24, gl.GL_QUADS, None, "v3f", "c3B")
         self.relative_vectors = []
 
         ix = 0
         for index, (axis, sign) in enumerate(Colors):
+            self.add_face(axis, sign, ix)
+            ix += 1
             if self.piece.colors[index]:
-                self.add_face(axis, sign, ix)
-                self.add_face(axis, sign, ix+1, sticker=True)
-                ix += 2
+                self.add_face(axis, sign, ix, sticker=True)
+                ix += 1
         self.update()
 
     def add_face(self, axis, sign, vl_index: int, sticker: bool = False):
@@ -102,6 +104,9 @@ class Window(pyglet.window.Window):
         self.is_paused = True
         self.update_command()
 
+        self.record = RECORDING
+        self.frame_count = 0
+
     def on_resize(self, width, height):
         gl.glViewport(0, 0, width, height)
 
@@ -130,6 +135,10 @@ class Window(pyglet.window.Window):
 
         self.faces.draw()
         gl.glPopMatrix()
+
+        if self.record:
+            pyglet.image.get_buffer_manager().get_color_buffer().save("./frames/" + str(self.frame_count) + '.png')
+            self.frame_count += 1
 
     def on_key_release(self, symbol, modifiers):
         if symbol & pyglet.window.key.SPACE:
