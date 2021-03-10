@@ -15,6 +15,9 @@ WIN_W = 480
 WIN_H = 480
 CUBE_SIZE = 3
 
+COMMANDS = [("R", np.pi/2), ("U", np.pi/2), ("R'", np.pi/2), ("U'", np.pi/2)] * 6
+ANGLE_STEP = np.pi/20
+
 Colors = {
     (0, 1): (255, 0, 0),
     (0, -1): (255, 140, 0),
@@ -94,6 +97,11 @@ class Window(pyglet.window.Window):
         for piece in self.cube.pieces:
             self.cubies.append(Cubie(piece, batch=self.faces))
 
+        self.current_command = [None, 0]
+        self.current_state = 0.0
+        self.is_paused = True
+        self.update_command()
+
     def on_resize(self, width, height):
         gl.glViewport(0, 0, width, height)
 
@@ -123,6 +131,10 @@ class Window(pyglet.window.Window):
         self.faces.draw()
         gl.glPopMatrix()
 
+    def on_key_release(self, symbol, modifiers):
+        if symbol & pyglet.window.key.SPACE:
+            self.is_paused = not self.is_paused
+
     def on_mouse_drag(self, x, y, dx, dy, buttons, modifiers):
         if buttons & pyglet.window.mouse.LEFT:
             self.rotation[0] -= dy
@@ -141,7 +153,24 @@ class Window(pyglet.window.Window):
         elif self.position[2] > -5:
             self.position[2] = -5
 
+    def update(self, dt):
+        if not self.is_paused:
+            move, angle = self.current_command
+            if move and angle != self.current_state:
+                self.cube.rotate(move, ANGLE_STEP)
+                self.current_state += ANGLE_STEP
+                if abs(self.current_state - self.current_command[1]) < ANGLE_STEP:
+                    self.current_state = 0
+                    self.update_command()
+
+    def update_command(self):
+        if COMMANDS:
+            self.current_command = COMMANDS.pop(0)
+        else:
+            self.current_command = [None, 0]
+
 
 if __name__ == "__main__":
     sim = Window(WIN_W, WIN_H)
+    pyglet.clock.schedule_interval(sim.update, 1 / 10)
     pyglet.app.run()
