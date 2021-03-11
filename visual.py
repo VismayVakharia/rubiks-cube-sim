@@ -15,17 +15,18 @@ WIN_W = 480
 WIN_H = 480
 CUBE_SIZE = 3
 
-COMMANDS = [("R", np.pi/2), ("U", np.pi/2), ("R'", np.pi/2), ("U'", np.pi/2)] * 6
+COMMANDS = []
 ANGLE_STEP = np.pi/20
+PAUSED = False
 RECORDING = False
 
 Colors = {
-    (0, 1): (255, 0, 0),
-    (0, -1): (255, 140, 0),
-    (1, 1): (255, 255, 51),
+    (0, 1): (233, 68, 48),
+    (0, -1): (241, 148, 47),
+    (1, 1): (244, 234, 43),
     (1, -1): (255, 255, 255),
-    (2, 1): (0, 0, 255),
-    (2, -1): (0, 255, 0),
+    (2, 1): (1, 118, 206),
+    (2, -1): (118, 227, 11),
 }
 
 
@@ -101,8 +102,7 @@ class Window(pyglet.window.Window):
 
         self.current_command = [None, 0]
         self.current_state = 0.0
-        self.is_paused = True
-        self.update_command()
+        self.is_paused = PAUSED
 
         self.record = RECORDING
         self.frame_count = 0
@@ -141,8 +141,18 @@ class Window(pyglet.window.Window):
             self.frame_count += 1
 
     def on_key_release(self, symbol, modifiers):
-        if symbol & pyglet.window.key.SPACE:
+        if symbol == pyglet.window.key.SPACE:
             self.is_paused = not self.is_paused
+        elif symbol == pyglet.window.key.BACKSPACE:
+            self.position = [0, 0, -10]
+            self.rotation = [30.0, -45.0, 0]
+        elif 97 <= symbol <= 122:
+            if bool(modifiers & pyglet.window.key.MOD_SHIFT) ^ bool(modifiers & pyglet.window.key.MOD_CAPSLOCK):
+                key = chr(symbol).upper()
+            else:
+                key = chr(symbol).upper() + "'"
+            if key[0].upper() in "RLUDFBMESXYZ":
+                COMMANDS.append((key, np.pi/2))
 
     def on_mouse_drag(self, x, y, dx, dy, buttons, modifiers):
         if buttons & pyglet.window.mouse.LEFT:
@@ -164,22 +174,20 @@ class Window(pyglet.window.Window):
 
     def update(self, dt):
         if not self.is_paused:
-            move, angle = self.current_command
-            if move and angle != self.current_state:
-                self.cube.rotate(move, ANGLE_STEP)
-                self.current_state += ANGLE_STEP
-                if abs(self.current_state - self.current_command[1]) < ANGLE_STEP:
+            if self.current_command[0] is None:
+                if COMMANDS:
+                    self.current_command = COMMANDS.pop(0)
+            else:
+                move, angle = self.current_command
+                if abs(self.current_state - angle) >= ANGLE_STEP:
+                    self.cube.rotate3x3(move, ANGLE_STEP)
+                    self.current_state += ANGLE_STEP
+                else:
+                    self.current_command = [None, 0]
                     self.current_state = 0
-                    self.update_command()
-
-    def update_command(self):
-        if COMMANDS:
-            self.current_command = COMMANDS.pop(0)
-        else:
-            self.current_command = [None, 0]
 
 
 if __name__ == "__main__":
     sim = Window(WIN_W, WIN_H)
-    pyglet.clock.schedule_interval(sim.update, 1 / 10)
+    pyglet.clock.schedule_interval(sim.update, 1 / 50)
     pyglet.app.run()

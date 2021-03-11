@@ -134,6 +134,9 @@ class Cube(object):
                   "L": Vector(-1, 0, 0),
                   "D": Vector(0, -1, 0),
                   "B": Vector(0, 0, -1)}
+    notation_map3x3 = {"M": "NL", "E": "ND", "S": "NF",
+                       "X": "CR", "Y": "CU", "Z": "CF"}
+    notation_map2x2 = {"X": "CR", "Y": "CU", "Z": "CF"}
 
     def __init__(self, size):
         self.size = size
@@ -245,3 +248,23 @@ class Cube(object):
 
         for layer in layers:
             self.rotate_layer(axis, layer, angle * multiplier)
+
+    def rotate3x3(self, move: str, angle: float = np.pi/2):
+        if move[0] in Cube.face_turns:
+            mapped_move = move
+        elif move[0].upper() in Cube.face_turns:
+            mapped_move = "T" + move
+        elif move[0] in Cube.notation_map3x3:
+            mapped_move = Cube.notation_map3x3[move[0]] + move[1:]
+        else:
+            raise Exception("Incorrect rotation input")
+        self.rotate(mapped_move, angle)
+
+    def rotate2x2(self, move: str, angle: float = np.pi/2):
+        if move[0] in Cube.face_turns:
+            mapped_move = move
+        elif move[0] in Cube.notation_map2x2:
+            mapped_move = Cube.notation_map2x2[move[0]] + move[1:]
+        else:
+            raise Exception("Incorrect rotation input")
+        self.rotate(mapped_move, angle)
