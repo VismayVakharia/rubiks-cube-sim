@@ -38,16 +38,43 @@ class Cubie(object):
         self.piece = piece
         self.sticker_factor = sticker_factor
         self.batch = pyglet.graphics.Batch() if (batch is None) else batch
-        self.vertex_list = self.batch.add(piece.type.value * 4 + 24, gl.GL_QUADS, None, "v3f", "c3B")
+        if piece.type == cb.PieceType.CORNER:
+            num_faces = piece.type.value + 6
+        elif piece.type == cb.PieceType.EDGE:
+            num_faces = piece.type.value + 4
+        elif piece.type == cb.PieceType.CENTER:
+            num_faces = piece.type.value + 5
+        else:
+            num_faces = piece.type.value + 6
+        self.vertex_list = self.batch.add(num_faces * 4, gl.GL_QUADS, None, "v3f", "c3B")
         self.relative_vectors = []
 
         ix = 0
         for index, (axis, sign) in enumerate(Colors):
-            self.add_face(axis, sign, ix)
-            ix += 1
             if self.piece.colors[index]:
+                self.add_face(axis, sign, ix)
+                ix += 1
                 self.add_face(axis, sign, ix, sticker=True)
                 ix += 1
+            else:
+                if self.piece.type == cb.PieceType.CORNER:
+                    self.add_face(axis, sign, ix)
+                    ix += 1
+                elif self.piece.type == cb.PieceType.EDGE:
+                    position = self.piece.position.as_list()
+                    temp_axis_position = min(map(lambda x: abs(x), position))
+                    if temp_axis_position in position:
+                        temp_axis = position.index(temp_axis_position)
+                    else:
+                        temp_axis = position.index(-temp_axis_position)
+                    if axis == temp_axis:
+                        self.add_face(axis, sign, ix)
+                        ix += 1
+                elif self.piece.type == cb.PieceType.CENTER:
+                    temp_axis = (self.piece.colors.index(True) // 2) % 3
+                    if axis != temp_axis:
+                        self.add_face(axis, sign, ix)
+                        ix += 1
         self.update()
 
     def add_face(self, axis, sign, vl_index: int, sticker: bool = False):
@@ -58,8 +85,8 @@ class Cubie(object):
         for c1, c2 in corners:
             vertex = [0, 0, 0]
             vertex[axis] = sign * (1 if not sticker else 1.01)
-            vertex[vertex.index(0)] = c1 * sticker_factor
-            vertex[vertex.index(0)] = c2 * sticker_factor
+            vertex[(axis + sign*2) % 3] = c1 * sticker_factor
+            vertex[(axis + sign*1) % 3] = c2 * sticker_factor
             vertex_vec = cb.Vector.from_list(vertex)
             vertex_vec *= 0.5
             self.relative_vectors.append(vertex_vec)
@@ -80,6 +107,7 @@ class Window(pyglet.window.Window):
         super(Window, self).__init__(width, height, config=config)
         gl.glClearColor(0.5, 0.5, 0.5, 1)
         gl.glEnable(gl.GL_DEPTH_TEST)
+        gl.glEnable(gl.GL_CULL_FACE)
 
         self.position = [0, 0, -10]
         self.rotation = [30.0, -45.0, 0]
