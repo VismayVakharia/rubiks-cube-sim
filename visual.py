@@ -101,6 +101,15 @@ class Cubie(object):
 
 
 class Window(pyglet.window.Window):
+    @staticmethod
+    def rotation_wrapper_mapping(cube_size: int):
+        switcher = {
+            1: ("rotate1x1", "XYZ"),
+            2: ("rotate2x2", "RLUDFBXYZ"),
+            3: ("rotate3x3", "RLUDFBMESXYZ"),
+        }
+        return switcher.get(cube_size, ("rotateNxN", "RLUDFBXYZ"))
+
     def __init__(self, width: int, height: int, cube_size: int = 3,
                  paused: bool = False, record: bool = False):
         config = pyglet.gl.Config(sample_buffers=1, samples=4, depth_size=1)
@@ -113,6 +122,8 @@ class Window(pyglet.window.Window):
         self.rotation = [30.0, -45.0, 0]
 
         self.cube = cb.Cube(cube_size)
+        rot_method, self.moves = Window.rotation_wrapper_mapping(cube_size)
+        self.rotation_method = getattr(self.cube, rot_method)
 
         self.faces = pyglet.graphics.Batch()
         self.cubies = []
@@ -172,7 +183,7 @@ class Window(pyglet.window.Window):
                 key = chr(symbol).upper()
             else:
                 key = chr(symbol).upper() + "'"
-            if key[0].upper() in "RLUDFBMESXYZ":
+            if key[0].upper() in self.moves:
                 self.commands.append(key)
 
     def on_mouse_drag(self, x, y, dx, dy, buttons, modifiers):
@@ -201,7 +212,7 @@ class Window(pyglet.window.Window):
             else:
                 move, angle = self.current_command
                 if abs(self.current_state - angle) >= self.angle_step:
-                    self.cube.rotate3x3(move, self.angle_step)
+                    self.rotation_method(move, self.angle_step)
                     self.current_state += self.angle_step
                 else:
                     self.current_command = [None, 0]

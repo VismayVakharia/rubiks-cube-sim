@@ -2,8 +2,8 @@
 
 from visual import Window
 
-WIN_W = 480
-WIN_H = 480
+WIN_W = 640
+WIN_H = 640
 CUBE_SIZE = 3
 
 COMMANDS = []
